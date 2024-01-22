@@ -1,4 +1,4 @@
-<img src="docs/logo.png" alt="logo" style="zoom:40%;" />
+<img src="docs/logo.png" alt="logo" style="zoom:15%;" />
 # isoOpen
 
 
