@@ -1,4 +1,6 @@
+<img src="docs/logo.png" alt="logo" style="zoom:40%;" />
 # isoOpen
+
 
 ## Python tools for mass spectrometry data analysis
 
