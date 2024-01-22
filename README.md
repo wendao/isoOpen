@@ -1,6 +1,6 @@
 <img src="docs/logo.png" alt="logo" width="160px" />
 
-# isoOpen
+# isoOpen (eyes open)
 
 
 ## Python tools for mass spectrometry data analysis
