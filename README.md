@@ -1,10 +1,11 @@
-<img src="docs/logo.png" alt="logo" style="zoom:15%;" />
+<img src="docs/logo.png" alt="logo" width="160px" />
+
 # isoOpen
 
 
 ## Python tools for mass spectrometry data analysis
 
-<img src="docs/demo.png" alt="demo" style="zoom:40%;" />
+<img src="docs/demo.png" alt="demo" width="800px"/>
 
 ### Features
 
