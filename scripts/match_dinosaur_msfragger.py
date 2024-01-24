@@ -28,7 +28,7 @@ r = np.median(rs)
 ppm = 1e-6
 rt_cut = 30.0
 
-print "Matching"
+print("Matching")
 lines = open(sys.argv[1], 'r').readlines()
 t = {}
 for n, tag in enumerate(lines[0].strip().split('\t')):
@@ -49,10 +49,10 @@ for l in lines[1:]:
             if fabs(mz_-mzI) > 10.0*ppm*mz_: continue
         #print rt_, rtStart, rtEnd
         if rt_<rtStart-rt_cut or rt_>rtEnd+rt_cut: continue
-        print "Hit MSF:", scan_, mz_, rtStart, rtEnd, rt_
+        print("Hit MSF:", scan_, mz_, rtStart, rtEnd, rt_)
         mark_msf[scan_] = 1
 
 t1 = len(mark_msf.keys())
 t2 = len(hits_msf)
-print t1, t2, float(t1)/t2
+print(t1, t2, float(t1)/t2)
 
