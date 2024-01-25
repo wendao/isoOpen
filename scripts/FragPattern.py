@@ -1,6 +1,7 @@
 import sys
 import matplotlib.pyplot as plt
 from scipy import signal
+from scipy.optimize import curve_fit
 from spectutilio import *
 import numpy as np
 from math import fabs
@@ -19,15 +20,19 @@ x_mid = (min_mz+max_mz)/2
 def gaussian(x, alpha, r):
   return np.exp(-alpha*np.power((x - r), 2.))
 
-def remove_ions_from(ori_mz, pat_mz, eps=0.01):
+def parabola(x, a, b, c):
+    return a * (x - b)**2 + c
+
+def remove_ions_from(ori_mz, pat_mz, eps=0.008):
     result = []
     for element in ori_mz:
         dist0 = [ fabs(element - pattern) for pattern in pat_mz ]
         dist1 = [ fabs(element - pattern - 1.003355) for pattern in pat_mz ]
-        if np.min(dist0)>eps and np.min(dist1)>eps: result.append(element)
+        dist2 = [ fabs(element - pattern - 1.003355*2) for pattern in pat_mz ]
+        if np.min(dist0)>eps and np.min(dist1)>eps and np.min(dist2)>eps: result.append(element)
     return result
 
-def extract_intensity_from(ori_mz, ori_int, pat_mz, eps=0.01, fill=0.0):
+def extract_intensity_from(ori_mz, ori_int, pat_mz, eps=0.005, fill=0.0):
     pat_int = []
     for pattern in pat_mz:
         matched_index = None
@@ -41,6 +46,18 @@ def extract_intensity_from(ori_mz, ori_int, pat_mz, eps=0.01, fill=0.0):
         else:
             pat_int.append(fill)
     return pat_int
+
+def fit_mz_by_sig_peak( sig, p_loc, N=3 ):
+    global bin_size
+    x = [ i*bin_size for i in range(-N, N+1) ]
+    y = sig[ p_loc-N : p_loc+N+1 ]
+    #print(x, y)
+    initial_guess = [-1000, 0, 10]
+    params, covariance = curve_fit(parabola, x, y, p0=initial_guess)
+    a_fit, b_fit, c_fit = params
+    #print( a_fit, b_fit, c_fit )
+    acc_mz = b_fit
+    return acc_mz
 
 #introduction
 # generate reference spectrum, ions with modification
@@ -62,7 +79,7 @@ peptide = sys.argv[3]
 #generate ideal fragments
 modpeptide = peptide.replace("*", "[+5000]") #digital labeling
 prots = proforma.parse(modpeptide)
-frags = fa.get_theoretical_fragments( prots[0], "by" ) #, neutral_losses={"H2O": -18.010565}
+frags = fa.get_theoretical_fragments( prots[0], "aby" ) #, neutral_losses={"H2O": -18.010565}
 
 std_mz = []
 mod_mz = []
@@ -152,6 +169,7 @@ if x_i != halfL:
 else:
     print("exp_ion_number_raw:", len(mz))
     print("Peptide fit!")
+    print("best_corr_score:", sig_std[x_i])
 
 #remove std ions
 mz_rm_std = remove_ions_from( mz, std_mz )
@@ -166,15 +184,16 @@ x_i = np.argmax(sig_std)
 h_std = sig_std[x_i]
 x_p = xbin[x_i] - x_mid
 print("std_global_shift:", "(%4.2f, %4.2f)"%(-x_p, h_std))
+print("second_corr_score:", sig_std[x_i])
 ##top10
-shift = []
-for i in range(10):
-    x_i = np.argmax(sig_std)
-    x_p = xbin[x_i] - x_mid
-    shift.append(x_p)
-    h_p0 = sig_std[x_i]
-    sig_std[x_i] = 0.0
-    print("top", i+1, "(%4.2f, %4.2f)"%(-x_p, h_p0))
+#shift = []
+#for i in range(10):
+#    x_i = np.argmax(sig_std)
+#    x_p = xbin[x_i] - x_mid
+#    shift.append(x_p)
+#    h_p0 = sig_std[x_i]
+#    sig_std[x_i] = 0.0
+#    print("top", i+1, "(%4.2f, %4.2f)"%(-x_p, h_p0))
 
 ##check mod ions
 sig_mod = signal.correlate(val, val_mod, mode='full')
@@ -188,15 +207,21 @@ x_top1 = x_p
 print("exp_ion_number_1:", len(mz_rm_std))
 print("mod_global_shift_1", "(%4.2f, %4.2f, %4.2f)"%(-x_p, h_mod, h_std))
 ##top10
-shift = []
-for i in range(10):
-    x_i = np.argmax(sig_mod[:halfL])
-    x_p = xbin[x_i] - x_mid
-    shift.append(x_p)
-    h_p = sig_mod[x_i]
-    h_p0 = sig_std[x_i]
-    sig_mod[x_i] = 0.0
-    print("top", i+1, "(%4.2f, %4.2f, %4.2f)"%(-x_p, h_p, h_p0))
+#shift = []
+#for i in range(10):
+#    x_i = np.argmax(sig_mod[:halfL])
+#    x_p = xbin[x_i] - x_mid
+#    shift.append(x_p)
+#    h_p = sig_mod[x_i]
+#    h_p0 = sig_std[x_i]
+#    sig_mod[x_i] = 0.0
+#    print("top", i+1, "(%4.2f, %4.2f, %4.2f)"%(-x_p, h_p, h_p0))
+#fit accurate top 1 mz
+x_i = np.argmax(sig_mod[:halfL])
+x_p = xbin[x_i] - x_mid
+acc_mz = x_p + fit_mz_by_sig_peak( sig_mod, x_i )
+print("fit_mod_1:", -acc_mz )
+final_shift = -acc_mz
 
 #remove mod ions
 mz_rm_mod = remove_ions_from( mz_rm_std, mod_mz-x_top1 )
@@ -215,24 +240,28 @@ x_p = xbin[x_i] - x_mid
 print("exp_ion_number_2", len(mz_rm_mod))
 print("mod_global_shift_2", "(%4.2f, %4.2f, %4.2f)"%(-x_p, h_mod, h_std))
 ##top10
-shift = []
-for i in range(10):
-    x_i = np.argmax(sig_mod[:halfL])
-    x_p = xbin[x_i] - x_mid
-    shift.append(x_p)
-    h_p = sig_mod[x_i]
-    h_p0 = sig_std[x_i]
-    sig_mod[x_i] = 0.0
-    print("top", i+1, "(%4.2f, %4.2f, %4.2f)"%(-x_p, h_p, h_p0))
+#shift = []
+#for i in range(10):
+#    x_i = np.argmax(sig_mod[:halfL])
+#    x_p = xbin[x_i] - x_mid
+#    shift.append(x_p)
+#    h_p = sig_mod[x_i]
+#    h_p0 = sig_std[x_i]
+#    sig_mod[x_i] = 0.0
+#    print("top", i+1, "(%4.2f, %4.2f, %4.2f)"%(-x_p, h_p, h_p0))
+#fit accurate top 1 mz
+x_i = np.argmax(sig_mod[:halfL])
+x_p = xbin[x_i] - x_mid
+acc_mz = x_p + fit_mz_by_sig_peak( sig_mod, x_i )
+print("fit_mod_2:", -acc_mz )
 
-#final_shift = -shift[0]
-#if final_shift<0:
-#    mod_str = "[" + "%4.2f"%final_shift + "]"
-#else:
-#    mod_str = "[+" + "%4.2f"%final_shift + "]"
-##print(mod_str)
-#modpeptide = peptide.replace("*", mod_str) #digital labeling
-#print( "output", file_name, file_type, scan, modpeptide )
-#draw_spect_pep_pdf( spectrum, modpeptide, "spect-"+file_name+"_"+str(scan)+".pdf" )
-#print( "Done!" )
+if final_shift<0:
+    mod_str = "[" + "%6.4f"%final_shift + "]"
+else:
+    mod_str = "[+" + "%6.4f"%final_shift + "]"
+#print(mod_str)
+modpeptide = peptide.replace("*", mod_str) #digital labeling
+print( "output", file_name, file_type, scan, modpeptide )
+draw_spect_pep_pdf( spectrum, modpeptide, "spect-"+file_name+"_"+str(scan)+".pdf" )
+print( "Done!" )
 
