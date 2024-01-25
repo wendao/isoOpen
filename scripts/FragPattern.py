@@ -57,6 +57,21 @@ def fit_mz_by_sig_peak( sig, p_loc, N=3 ):
     a_fit, b_fit, c_fit = params
     #print( a_fit, b_fit, c_fit )
     acc_mz = b_fit
+
+    #draw qc
+    x_fit = np.linspace(min(x)-bin_size, max(x)+bin_size, 100*N)
+    y_fit = parabola(x_fit, a_fit, b_fit, c_fit)
+
+    plt.scatter(x, y, label='corr score', color='blue', s=50, marker='o')
+    plt.plot(x_fit, y_fit, label='Fitted Parabola', color='red', linewidth=2)
+    plt.axvline(x=b_fit, color='grey', linestyle='--', label=f'x = {b_fit:.4f}')
+    plt.title('MZ Fit')
+    plt.xlabel('mz')
+    plt.ylabel('sig')
+    plt.legend()
+    plt.savefig("qc_%6.4f.pdf"%acc_mz)
+    plt.close()
+
     return acc_mz
 
 #introduction
