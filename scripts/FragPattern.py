@@ -237,6 +237,14 @@ x_p = xbin[x_i] - x_mid
 acc_mz = x_p + fit_mz_by_sig_peak( sig_mod, x_i )
 print("fit_mod_1:", -acc_mz )
 final_shift = -acc_mz
+if final_shift<0:
+    mod_str = "[" + "%6.4f"%final_shift + "]"
+else:
+    mod_str = "[+" + "%6.4f"%final_shift + "]"
+#print(mod_str)
+modpeptide = peptide.replace("*", mod_str) #digital labeling
+print( "output", file_name, file_type, scan, modpeptide )
+draw_spect_pep_pdf( spectrum, modpeptide, "spect-"+file_name+"_"+str(scan)+"_mod_1.pdf" )
 
 #remove mod ions
 mz_rm_mod = remove_ions_from( mz_rm_std, mod_mz-x_top1 )
@@ -269,7 +277,7 @@ x_i = np.argmax(sig_mod[:halfL])
 x_p = xbin[x_i] - x_mid
 acc_mz = x_p + fit_mz_by_sig_peak( sig_mod, x_i )
 print("fit_mod_2:", -acc_mz )
-
+final_shift = -acc_mz
 if final_shift<0:
     mod_str = "[" + "%6.4f"%final_shift + "]"
 else:
@@ -277,6 +285,6 @@ else:
 #print(mod_str)
 modpeptide = peptide.replace("*", mod_str) #digital labeling
 print( "output", file_name, file_type, scan, modpeptide )
-draw_spect_pep_pdf( spectrum, modpeptide, "spect-"+file_name+"_"+str(scan)+".pdf" )
+draw_spect_pep_pdf( spectrum, modpeptide, "spect-"+file_name+"_"+str(scan)+"_mod_2.pdf" )
 print( "Done!" )
 
