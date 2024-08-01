@@ -1,7 +1,7 @@
 <img src="docs/logo.png" alt="logo" width="160px" />
 
 # isoOpen (eyes open)
-
+Brighten the dark coner of proteome with heavy light
 
 ## Python tools for mass spectrometry data analysis
 
