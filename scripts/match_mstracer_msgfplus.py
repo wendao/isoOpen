@@ -86,7 +86,7 @@ for l in lines[1:]:
 
 t1 = len(mark_msf.keys())
 t2 = len(hits_msf)
-print t1, t2, float(t1)/t2
+print(t1, t2, float(t1)/t2)
 t1 = len(mark_msg.keys())
 t2 = len(hits_msg)
-print t1, t2, float(t1)/t2
+print(t1, t2, float(t1)/t2)
