@@ -1,4 +1,5 @@
 import sys
+import argparse
 import numpy as np
 from math import fabs
 from collections import defaultdict
@@ -28,8 +29,13 @@ r = np.median(rs)
 ppm = 1e-6
 rt_cut = 30.0
 
+parser = argparse.ArgumentParser(description='Match Dinosaur features with MSFragger results')
+parser.add_argument('dinosaur_file', help='Dinosaur feature file')
+parser.add_argument('msfragger_file', help='MSFragger results file')
+args = parser.parse_args()
+
 print("Matching")
-lines = open(sys.argv[1], 'r').readlines()
+lines = open(args.dinosaur_file, 'r').readlines()
 t = {}
 for n, tag in enumerate(lines[0].strip().split('\t')):
     t[tag] = n

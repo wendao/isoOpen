@@ -1,4 +1,5 @@
 import sys
+import argparse
 import numpy as np
 from math import fabs
 from collections import defaultdict
@@ -45,8 +46,13 @@ for l in lines[1:]:
 ppm = 1e-6
 rt_cut = 30.0
 
+parser = argparse.ArgumentParser(description='Match MSTracer features with MSGF+ results')
+parser.add_argument('mstracer_file', help='MSTracer feature file')
+parser.add_argument('msgfplus_file', help='MSGF+ results file')
+args = parser.parse_args()
+
 print "Matching"
-lines = open(sys.argv[1], 'r').readlines()
+lines = open(args.mstracer_file, 'r').readlines()
 t = {}
 for n, tag in enumerate(lines[0].strip().split('\t')):
     t[tag] = n

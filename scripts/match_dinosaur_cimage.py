@@ -1,11 +1,17 @@
 import sys
+import argparse
 import numpy as np
 from math import fabs, log
 from collections import defaultdict
 
+parser = argparse.ArgumentParser(description='Match Dinosaur features with CIMAGE results')
+parser.add_argument('dinosaur_file', help='Dinosaur feature file')
+parser.add_argument('cimage_file', help='CIMAGE results file')
+args = parser.parse_args()
+
 hits = []
 mark = {}
-lines = open(sys.argv[2], 'r').readlines()
+lines = open(args.cimage_file, 'r').readlines()
 t = {}
 for n, tag in enumerate(lines[0].strip().split('\t')):
     t[tag] = n
@@ -29,7 +35,7 @@ ppm = 1e-6
 rt_cut = 30.0
 
 print("Matching")
-lines = open(sys.argv[1], 'r').readlines()
+lines = open(args.dinosaur_file, 'r').readlines()
 t = {}
 for n, tag in enumerate(lines[0].strip().split('\t')):
     t[tag] = n

@@ -1,4 +1,5 @@
 import sys
+import argparse
 import matplotlib.pyplot as plt
 from scipy import signal
 from scipy.optimize import curve_fit
@@ -87,16 +88,15 @@ def fit_mz_by_sig_peak( sig, p_loc, N=3 ):
 
 #usage: file scan peptide
 
-if len(sys.argv) != 4:
-    sys.exit("Usage: python FragPattern.py <input_file> <scan_number> <peptide_sequence>")
+parser = argparse.ArgumentParser(description='Analyze fragmentation patterns from mass spectrometry data')
+parser.add_argument('input_file', help='Path to input file (mgf/mzML/mzXML)')
+parser.add_argument('scan_number', type=int, help='Scan number to analyze')
+parser.add_argument('peptide_sequence', help='Peptide sequence to match (may contain * for modifications)')
+args = parser.parse_args()
 
-full_path = sys.argv[1]
-try:
-    scan = int(sys.argv[2])
-except ValueError:
-    sys.exit(f"Error: Invalid scan number '{sys.argv[2]}' - must be an integer")
-
-peptide = sys.argv[3]
+full_path = args.input_file
+scan = args.scan_number
+peptide = args.peptide_sequence
 if not peptide.replace("*", "").isalpha():
     sys.exit(f"Error: Invalid peptide sequence '{peptide}' - must contain only letters and optional '*' modification marker")
 
