@@ -51,7 +51,7 @@ parser.add_argument('mstracer_file', help='MSTracer feature file')
 parser.add_argument('msgfplus_file', help='MSGF+ results file')
 args = parser.parse_args()
 
-print "Matching"
+print("Matching")
 lines = open(args.mstracer_file, 'r').readlines()
 t = {}
 for n, tag in enumerate(lines[0].strip().split('\t')):
@@ -72,7 +72,7 @@ for l in lines[1:]:
             if fabs(mz_-mzI) > 10.0*ppm*mz_: continue
         #print rt_, rtStart, rtEnd
         if rt_<rtStart-rt_cut or rt_>rtEnd+rt_cut: continue
-        print "Hit MSF:", scan_, mz_, rtStart, rtEnd, rt_
+        print("Hit MSF:", scan_, mz_, rtStart, rtEnd, rt_)
         mark_msf[scan_] = 1
     #from msg
     for scan_, mz_, rt_, c_ in hits_msg:
@@ -81,7 +81,7 @@ for l in lines[1:]:
             if fabs(mz_-mzI) > 10.0*ppm*mz_: continue
         #print rt_, rtStart, rtEnd
         if rt_<rtStart-rt_cut or rt_>rtEnd+rt_cut: continue
-        print "Hit MSG:", scan_, mz_, rtStart, rtEnd, rt_
+        print("Hit MSG:", scan_, mz_, rtStart, rtEnd, rt_)
         mark_msg[scan_] = 1
 
 t1 = len(mark_msf.keys())
