@@ -87,9 +87,18 @@ def fit_mz_by_sig_peak( sig, p_loc, N=3 ):
 
 #usage: file scan peptide
 
+if len(sys.argv) != 4:
+    sys.exit("Usage: python FragPattern.py <input_file> <scan_number> <peptide_sequence>")
+
 full_path = sys.argv[1]
-scan = int(sys.argv[2])
+try:
+    scan = int(sys.argv[2])
+except ValueError:
+    sys.exit(f"Error: Invalid scan number '{sys.argv[2]}' - must be an integer")
+
 peptide = sys.argv[3]
+if not peptide.replace("*", "").isalpha():
+    sys.exit(f"Error: Invalid peptide sequence '{peptide}' - must contain only letters and optional '*' modification marker")
 
 #generate ideal fragments
 modpeptide = peptide.replace("*", "[+5000]") #digital labeling
@@ -150,14 +159,20 @@ for center, h in zip(mod_mz, mod_int):
 file_name = full_path.split('/')[-1]
 file_type = file_name.split('.')[-1]
 file_name = file_name[:-len(file_type)-1]
-if file_type == "mgf":
-    spectrum = get_spectrum_from_mgf( full_path, scan )
-elif file_type == "mzML":
-    spectrum = get_spectrum_from_mzML( full_path, scan )
-elif file_type == "mzXML":
-    spectrum = get_spectrum_from_mzXML( full_path, scan )
-else:
-    print("Filetype not supported!")
+try:
+    if file_type == "mgf":
+        spectrum = get_spectrum_from_mgf(full_path, scan)
+    elif file_type == "mzML":
+        spectrum = get_spectrum_from_mzML(full_path, scan)
+    elif file_type == "mzXML":
+        spectrum = get_spectrum_from_mzXML(full_path, scan)
+    else:
+        sys.exit(f"Error: Unsupported file type '{file_type}'. Supported types: mgf, mzML, mzXML")
+except Exception as e:
+    sys.exit(f"Error reading spectrum from {full_path} (scan {scan}): {str(e)}")
+
+if not hasattr(spectrum, 'mz') or not hasattr(spectrum, 'intensity'):
+    sys.exit(f"Error: Invalid spectrum data in {full_path} (scan {scan}) - missing mz or intensity arrays")
 
 #conv plot for exp MS2
 mz = spectrum.mz
