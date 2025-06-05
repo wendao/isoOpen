@@ -1,0 +1,9 @@
+set xlabel "log2(R)"
+set ylabel "histogram"
+plot "L10H1/msf/hist.txt" u 1:3 w l lw 2 t "L10H1", \
+      "L5H1/msf/hist.txt" u 1:3 w l lw 2 t "L5H1", \
+      "L2H1/msf/hist.txt" u 1:3 w l lw 2 t "L2H1", \
+      "L1H1/msf/hist.txt" u 1:3 w l lw 2 t "L1H1", \
+      "L1H2/msf/hist.txt" u 1:3 w l lw 2 t "L1H2", \
+      "L1H5/msf/hist.txt" u 1:3 w l lw 2 t "L1H5", \
+     "L1H10/msf/hist.txt" u 1:3 w l lw 2 t "L1H10"
