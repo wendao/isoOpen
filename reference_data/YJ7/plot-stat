@@ -1,0 +1,10 @@
+set terminal png size 600, 400
+set output 'ident-quant.png'
+
+set key left
+set xrange[0:]
+plot "msf.stat.txt" using 1:2:3 with errorlines lc "green" pt 8 ps 1.5 lw 2 t "MSFragger", \
+     "pfd.stat.txt" using 1:2:3 with errorlines lc "red" pt 4 ps 1.5 lw 2 t "pFind", \
+     "mxq.stat.txt" using 1:2:3 with errorlines lc "blue" pt 6 ps 1.5 lw 2 t "MaxQuant"
+
+#plot "msf.stat.txt" using 1:3 with lp lc "blue" pt 5 ps 1.5 t "MSFragger", "pfd.stat.txt" using 1:3 with lp lc "red" pt 5 ps 1.5 t "pFind", "mxq.stat.txt" using 1:3 with lp lc "green" pt 5 ps 1.5 t "MaxQuant"
