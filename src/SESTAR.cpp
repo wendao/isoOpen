@@ -68,29 +68,31 @@ map<EnvelopeParameters, float> CutoffMap;
 vector<set<EnvelopeParameters>> AcceptedParameters;
 
 void AddElement(float distribution[ELEMENTISOLENGTH], double exactmass, float initialcutoff) {
-	float(*temp)[ELEMENTISOLENGTH] = new float[ElementNumber + 1][ELEMENTISOLENGTH];
-	memcpy(temp, Element, ElementNumber * ELEMENTISOLENGTH * sizeof(float));
-	memcpy(temp + ElementNumber, distribution, ELEMENTISOLENGTH * sizeof(float));
+    float(*temp)[ELEMENTISOLENGTH] = new float[ElementNumber + 1][ELEMENTISOLENGTH];
+    memcpy(temp, Element, ElementNumber * ELEMENTISOLENGTH * sizeof(float));
+    memcpy(temp + ElementNumber, distribution, ELEMENTISOLENGTH * sizeof(float));
 
-	delete[] Element;
-	Element = temp;
+    delete[] Element;  // Free old memory
+    Element = temp;
 
-	double* ttmp = new double[ElementNumber - 4];
-	memcpy(ttmp, ExactMass, (ElementNumber-5) * sizeof(double));
-	ttmp[ElementNumber-5] = exactmass;
+    double* ttmp = new double[ElementNumber - 4];
+    if (ExactMass) {  // Check if ExactMass exists before copying
+        memcpy(ttmp, ExactMass, (ElementNumber-5) * sizeof(double));
+        delete[] ExactMass;  // Free old memory
+    }
+    ttmp[ElementNumber-5] = exactmass;
+    ExactMass = ttmp;
 
-	delete[] ExactMass;
-	ExactMass = ttmp;
+    float* tttmp = new float[ElementNumber - 4];
+    if (InitialCutoff) {  // Check if InitialCutoff exists before copying
+        memcpy(tttmp, InitialCutoff, (ElementNumber-5) * sizeof(float));
+        delete[] InitialCutoff;  // Free old memory
+    }
+    tttmp[ElementNumber-5] = initialcutoff;
+    InitialCutoff = tttmp;
 
-	float* tttmp = new float[ElementNumber - 4];
-	memcpy(tttmp, InitialCutoff, (ElementNumber-5) * sizeof(float));
-	tttmp[ElementNumber-5] = initialcutoff;
-
-	delete[] InitialCutoff;
-	InitialCutoff = tttmp;
-
-	++ElementNumber;
-	AcceptedParameters.push_back(set<EnvelopeParameters>());
+    ++ElementNumber;
+    AcceptedParameters.push_back(set<EnvelopeParameters>());
 }
 
 struct Rscore {
@@ -282,6 +284,79 @@ public:
 		if (iter >= Length) return -1;
 		else return Position[iter];
 	}
+
+    // Add proper copy assignment operator
+    Envelope& operator=(const Envelope& e) {
+        if (this != &e) {
+            delete[] Mz;
+            delete[] Intensity;
+            delete[] Position;
+            
+            MaxLength = e.MaxLength;
+            Length = e.Length;
+            Charge = e.Charge;
+
+            Mz = new double[MaxLength];
+            Intensity = new float[MaxLength];
+            Position = new int[MaxLength];
+            
+            memcpy(Mz, e.Mz, MaxLength * sizeof(double));
+            memcpy(Intensity, e.Intensity, MaxLength * sizeof(float));
+            memcpy(Position, e.Position, MaxLength * sizeof(int));
+            
+            R[0] = e.R[0];
+            R[1] = e.R[1];
+            Tag = e.Tag;
+            Error = e.Error;
+            Pair = e.Pair;
+        }
+        return *this;
+    }
+    
+    // Add move constructor
+    Envelope(Envelope&& e) noexcept {
+        Mz = e.Mz;
+        Intensity = e.Intensity;
+        Position = e.Position;
+        MaxLength = e.MaxLength;
+        Length = e.Length;
+        Charge = e.Charge;
+        R[0] = e.R[0];
+        R[1] = e.R[1];
+        Tag = e.Tag;
+        Error = e.Error;
+        Pair = e.Pair;
+        
+        e.Mz = nullptr;
+        e.Intensity = nullptr;
+        e.Position = nullptr;
+    }
+    
+    // Add move assignment operator
+    Envelope& operator=(Envelope&& e) noexcept {
+        if (this != &e) {
+            delete[] Mz;
+            delete[] Intensity;
+            delete[] Position;
+            
+            Mz = e.Mz;
+            Intensity = e.Intensity;
+            Position = e.Position;
+            MaxLength = e.MaxLength;
+            Length = e.Length;
+            Charge = e.Charge;
+            R[0] = e.R[0];
+            R[1] = e.R[1];
+            Tag = e.Tag;
+            Error = e.Error;
+            Pair = e.Pair;
+            
+            e.Mz = nullptr;
+            e.Intensity = nullptr;
+            e.Position = nullptr;
+        }
+        return *this;
+    }
 
 	~Envelope() {
 		delete[] Mz;
@@ -511,86 +586,163 @@ private:
 	}
 };
 
+//void FindEnvelope(vector<Envelope*>& envelopes, double mz[], double intensity[], int length, int lenMin = 6, int lenMax = 14) {
+//	vector<Envelope*> temp;
+//	temp.reserve(length * 1.5f);
+//	Envelope* e = NULL;
+//	unsigned short charge;
+//	for (int k = 0; k < AcceptChargeLength; ++k) {
+//		charge = AcceptCharge[k];
+//		temp.clear();
+//		
+//		for (int i = 0; i < length; i++) {
+//			if (mz[i] == -1) continue;
+//			bool ff = false;
+//			double mass = mz[i] * charge;
+//			for (int j = temp.size() - 1; j >= 0; j--) {
+//				if (temp[j] == NULL) continue;
+//				double lastmass = (*temp[j]).GetLastMz() * (*temp[j]).GetCharge();
+//				double last2mass = (*temp[j]).GetMz((*temp[j]).GetLength() - 2) * (*temp[j]).GetCharge();
+//				if (abs(lastmass + NEUTRON - mass) < ENVELOPEPPM * (mass + lastmass) / 2.0) {
+//					(*temp[j]).Add(mz[i], intensity[i], i);
+//					temp.push_back(temp[j]);
+//					temp[j] = NULL;
+//					ff = true;
+//				}
+//				else if (abs(last2mass + NEUTRON - mass) < ENVELOPEPPM * (mass + last2mass) / 2.0) {
+//					e = new Envelope(*temp[j], 0, (*temp[j]).GetLength() - 1);
+//					(*e).Add(mz[i], intensity[i], i);
+//					temp.push_back(e);
+//					ff = true;
+//				}
+//				else if (lastmass < (mass - NEUTRON) * (1.0 - ENVELOPEPPM)) {
+//					break;
+//				}
+//			}
+//			if (!ff) {
+//				e = new Envelope(mz[i], intensity[i], i, charge);
+//				temp.push_back(e);
+//			}
+//		}
+//		e = NULL;
+//		
+//		int counttemp = 0;
+//		for (int j = temp.size() - 1; j >= 0; j--) {
+//			if (temp[j] == NULL) continue;
+//			counttemp += 1;
+//
+//			int len = (*temp[j]).GetLength();
+//			bool addflag = false;
+//			if (len >= lenMin && len <= lenMax) {
+//				addflag = true;
+//				for (vector<Envelope*>::iterator k = envelopes.begin(); k != envelopes.end(); k++) {
+//					bool containflag = true;
+//					for (int jj = 0; jj < len; jj++) {
+//						bool uniqueflag = true;
+//						for (int kk = 0; kk < (**k).GetLength(); kk++) {
+//							if ((*temp[j]).GetMz(jj) == (**k).GetMz(kk)) {
+//								uniqueflag = false;
+//								break;
+//							}
+//						}
+//						if (uniqueflag) {
+//							containflag = false;
+//							break;
+//						}
+//					}
+//					if (containflag) {
+//						addflag = false;
+//						break;
+//					}
+//				}
+//			}
+//			if (!addflag) {
+//				delete temp[j];
+//				temp[j] = NULL;
+//			}
+//			else {
+//				envelopes.push_back(temp[j]);
+//			}
+//
+//		}
+//	}
+//}
 void FindEnvelope(vector<Envelope*>& envelopes, double mz[], double intensity[], int length, int lenMin = 6, int lenMax = 14) {
-	vector<Envelope*> temp;
-	temp.reserve(length * 1.5f);
-	Envelope* e = NULL;
-	unsigned short charge;
-	for (int k = 0; k < AcceptChargeLength; ++k) {
-		charge = AcceptCharge[k];
-		temp.clear();
-		
-		for (int i = 0; i < length; i++) {
-			if (mz[i] == -1) continue;
-			bool ff = false;
-			double mass = mz[i] * charge;
-			for (int j = temp.size() - 1; j >= 0; j--) {
-				if (temp[j] == NULL) continue;
-				double lastmass = (*temp[j]).GetLastMz() * (*temp[j]).GetCharge();
-				double last2mass = (*temp[j]).GetMz((*temp[j]).GetLength() - 2) * (*temp[j]).GetCharge();
-				if (abs(lastmass + NEUTRON - mass) < ENVELOPEPPM * (mass + lastmass) / 2.0) {
-					(*temp[j]).Add(mz[i], intensity[i], i);
-					temp.push_back(temp[j]);
-					temp[j] = NULL;
-					ff = true;
-				}
-				else if (abs(last2mass + NEUTRON - mass) < ENVELOPEPPM * (mass + last2mass) / 2.0) {
-					e = new Envelope(*temp[j], 0, (*temp[j]).GetLength() - 1);
-					(*e).Add(mz[i], intensity[i], i);
-					temp.push_back(e);
-					ff = true;
-				}
-				else if (lastmass < (mass - NEUTRON) * (1.0 - ENVELOPEPPM)) {
-					break;
-				}
-			}
-			if (!ff) {
-				e = new Envelope(mz[i], intensity[i], i, charge);
-				temp.push_back(e);
-			}
-		}
-		e = NULL;
-		
-		int counttemp = 0;
-		for (int j = temp.size() - 1; j >= 0; j--) {
-			if (temp[j] == NULL) continue;
-			counttemp += 1;
-
-			int len = (*temp[j]).GetLength();
-			bool addflag = false;
-			if (len >= lenMin && len <= lenMax) {
-				addflag = true;
-				for (vector<Envelope*>::iterator k = envelopes.begin(); k != envelopes.end(); k++) {
-					bool containflag = true;
-					for (int jj = 0; jj < len; jj++) {
-						bool uniqueflag = true;
-						for (int kk = 0; kk < (**k).GetLength(); kk++) {
-							if ((*temp[j]).GetMz(jj) == (**k).GetMz(kk)) {
-								uniqueflag = false;
-								break;
-							}
-						}
-						if (uniqueflag) {
-							containflag = false;
-							break;
-						}
-					}
-					if (containflag) {
-						addflag = false;
-						break;
-					}
-				}
-			}
-			if (!addflag) {
-				delete temp[j];
-				temp[j] = NULL;
-			}
-			else {
-				envelopes.push_back(temp[j]);
-			}
-
-		}
-	}
+    vector<unique_ptr<Envelope>> temp;  // Use unique_ptr for automatic cleanup
+    temp.reserve(length * 1.5f);
+    Envelope* e = nullptr;
+    unsigned short charge;
+    
+    for (int k = 0; k < AcceptChargeLength; ++k) {
+        charge = AcceptCharge[k];
+        temp.clear();
+        
+        for (int i = 0; i < length; i++) {
+            if (mz[i] == -1) continue;
+            bool ff = false;
+            double mass = mz[i] * charge;
+            
+            for (int j = temp.size() - 1; j >= 0; j--) {
+                if (!temp[j]) continue;
+                
+                double lastmass = temp[j]->GetLastMz() * temp[j]->GetCharge();
+                double last2mass = temp[j]->GetMz(temp[j]->GetLength() - 2) * temp[j]->GetCharge();
+                
+                if (abs(lastmass + NEUTRON - mass) < ENVELOPEPPM * (mass + lastmass) / 2.0) {
+                    temp[j]->Add(mz[i], intensity[i], i);
+                    temp.push_back(move(temp[j]));  // Move ownership
+                    ff = true;
+                }
+                else if (abs(last2mass + NEUTRON - mass) < ENVELOPEPPM * (mass + last2mass) / 2.0) {
+                    e = new Envelope(*temp[j], 0, temp[j]->GetLength() - 1);
+                    e->Add(mz[i], intensity[i], i);
+                    temp.push_back(unique_ptr<Envelope>(e));
+                    ff = true;
+                }
+                else if (lastmass < (mass - NEUTRON) * (1.0 - ENVELOPEPPM)) {
+                    break;
+                }
+            }
+            
+            if (!ff) {
+                temp.push_back(make_unique<Envelope>(mz[i], intensity[i], i, charge));
+            }
+        }
+        
+        for (auto& env : temp) {
+            if (!env) continue;
+            
+            int len = env->GetLength();
+            bool addflag = (len >= lenMin && len <= lenMax);
+            
+            if (addflag) {
+                for (auto& existing : envelopes) {
+                    bool containflag = true;
+                    for (int jj = 0; jj < len; jj++) {
+                        bool uniqueflag = true;
+                        for (int kk = 0; kk < existing->GetLength(); kk++) {
+                            if (env->GetMz(jj) == existing->GetMz(kk)) {
+                                uniqueflag = false;
+                                break;
+                            }
+                        }
+                        if (uniqueflag) {
+                            containflag = false;
+                            break;
+                        }
+                    }
+                    if (containflag) {
+                        addflag = false;
+                        break;
+                    }
+                }
+            }
+            
+            if (addflag) {
+                envelopes.push_back(env.release());  // Transfer ownership
+            }
+        }
+    }
 }
 
 void FindPatternEnvelope(int element,
@@ -912,6 +1064,11 @@ int main(int argc, char* argv[]) {
     }
     // 文件末尾，处理最后一谱
     process_spectrum();
+
+    delete[] AcceptCharge;
+    delete[] Element;
+    delete[] ExactMass;
+    delete[] InitialCutoff;
 
     return EXIT_SUCCESS;
 }
