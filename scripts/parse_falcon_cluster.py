@@ -26,9 +26,12 @@ for l in lines:
 for clust in groups.keys():
   if len(groups[clust].keys())==5:
     #print(groups[clust])
-    out_str = "cluster:"
+    count = 0
+    out_str = ""
     for k in groups[clust].keys():
       out_str += " "+k
       for s in groups[clust][k]:
         out_str += ":"+str(s)
+        count += 1
+    out_str = "cluster: " + str(count) + out_str
     print(out_str)

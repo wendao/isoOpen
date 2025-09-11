@@ -11,11 +11,13 @@ with mzml.read(mzml_file_path) as reader:
     for idx, spectrum in enumerate(reader):
         ms_level = spectrum.get('ms level')
         scan_number = spectrum.get('id', f"index={idx}").split('=')[-1]
+        rt = spectrum['scanList']['scan'][0].get('scan start time')
         if ms_level == 1:
             number_ms1 += 1
             if number_ms1>1: print()
             print(number_ms1, end="\t")
             print(scan_number, end="\t")
+            print(rt, end="\t")
             flag = ""
         elif ms_level == 2:
             print(flag+str(scan_number), end="")
