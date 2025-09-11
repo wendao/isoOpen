@@ -587,159 +587,242 @@ private:
 };
 
 //void FindEnvelope(vector<Envelope*>& envelopes, double mz[], double intensity[], int length, int lenMin = 6, int lenMax = 14) {
-//	vector<Envelope*> temp;
-//	temp.reserve(length * 1.5f);
-//	Envelope* e = NULL;
-//	unsigned short charge;
-//	for (int k = 0; k < AcceptChargeLength; ++k) {
-//		charge = AcceptCharge[k];
-//		temp.clear();
-//		
-//		for (int i = 0; i < length; i++) {
-//			if (mz[i] == -1) continue;
-//			bool ff = false;
-//			double mass = mz[i] * charge;
-//			for (int j = temp.size() - 1; j >= 0; j--) {
-//				if (temp[j] == NULL) continue;
-//				double lastmass = (*temp[j]).GetLastMz() * (*temp[j]).GetCharge();
-//				double last2mass = (*temp[j]).GetMz((*temp[j]).GetLength() - 2) * (*temp[j]).GetCharge();
-//				if (abs(lastmass + NEUTRON - mass) < ENVELOPEPPM * (mass + lastmass) / 2.0) {
-//					(*temp[j]).Add(mz[i], intensity[i], i);
-//					temp.push_back(temp[j]);
-//					temp[j] = NULL;
-//					ff = true;
-//				}
-//				else if (abs(last2mass + NEUTRON - mass) < ENVELOPEPPM * (mass + last2mass) / 2.0) {
-//					e = new Envelope(*temp[j], 0, (*temp[j]).GetLength() - 1);
-//					(*e).Add(mz[i], intensity[i], i);
-//					temp.push_back(e);
-//					ff = true;
-//				}
-//				else if (lastmass < (mass - NEUTRON) * (1.0 - ENVELOPEPPM)) {
-//					break;
-//				}
-//			}
-//			if (!ff) {
-//				e = new Envelope(mz[i], intensity[i], i, charge);
-//				temp.push_back(e);
-//			}
-//		}
-//		e = NULL;
-//		
-//		int counttemp = 0;
-//		for (int j = temp.size() - 1; j >= 0; j--) {
-//			if (temp[j] == NULL) continue;
-//			counttemp += 1;
-//
-//			int len = (*temp[j]).GetLength();
-//			bool addflag = false;
-//			if (len >= lenMin && len <= lenMax) {
-//				addflag = true;
-//				for (vector<Envelope*>::iterator k = envelopes.begin(); k != envelopes.end(); k++) {
-//					bool containflag = true;
-//					for (int jj = 0; jj < len; jj++) {
-//						bool uniqueflag = true;
-//						for (int kk = 0; kk < (**k).GetLength(); kk++) {
-//							if ((*temp[j]).GetMz(jj) == (**k).GetMz(kk)) {
-//								uniqueflag = false;
-//								break;
-//							}
-//						}
-//						if (uniqueflag) {
-//							containflag = false;
-//							break;
-//						}
-//					}
-//					if (containflag) {
-//						addflag = false;
-//						break;
-//					}
-//				}
-//			}
-//			if (!addflag) {
-//				delete temp[j];
-//				temp[j] = NULL;
-//			}
-//			else {
-//				envelopes.push_back(temp[j]);
-//			}
-//
-//		}
-//	}
+//    vector<unique_ptr<Envelope>> temp;  // Use unique_ptr for automatic cleanup
+//    temp.reserve(length * 1.5f);
+//    Envelope* e = nullptr;
+//    unsigned short charge;
+//    
+//    for (int k = 0; k < AcceptChargeLength; ++k) {
+//        charge = AcceptCharge[k];
+//        temp.clear();
+//        
+//        for (int i = 0; i < length; i++) {
+//            if (mz[i] == -1) continue;
+//            bool ff = false;
+//            double mass = mz[i] * charge;
+//            
+//            for (int j = temp.size() - 1; j >= 0; j--) {
+//                if (!temp[j]) continue;
+//                
+//                double lastmass = temp[j]->GetLastMz() * temp[j]->GetCharge();
+//                double last2mass = temp[j]->GetMz(temp[j]->GetLength() - 2) * temp[j]->GetCharge();
+//                
+//                if (abs(lastmass + NEUTRON - mass) < ENVELOPEPPM * (mass + lastmass) / 2.0) {
+//                    temp[j]->Add(mz[i], intensity[i], i);
+//                    temp.push_back(move(temp[j]));  // Move ownership
+//                    ff = true;
+//                }
+//                else if (abs(last2mass + NEUTRON - mass) < ENVELOPEPPM * (mass + last2mass) / 2.0) {
+//                    e = new Envelope(*temp[j], 0, temp[j]->GetLength() - 1);
+//                    e->Add(mz[i], intensity[i], i);
+//                    temp.push_back(unique_ptr<Envelope>(e));
+//                    ff = true;
+//                }
+//                else if (lastmass < (mass - NEUTRON) * (1.0 - ENVELOPEPPM)) {
+//                    break;
+//                }
+//            }
+//            
+//            if (!ff) {
+//                temp.push_back(make_unique<Envelope>(mz[i], intensity[i], i, charge));
+//            }
+//        }
+//        
+//        for (auto& env : temp) {
+//            if (!env) continue;
+//            
+//            int len = env->GetLength();
+//            bool addflag = (len >= lenMin && len <= lenMax);
+//            
+//            if (addflag) {
+//                for (auto& existing : envelopes) {
+//                    bool containflag = true;
+//                    for (int jj = 0; jj < len; jj++) {
+//                        bool uniqueflag = true;
+//                        for (int kk = 0; kk < existing->GetLength(); kk++) {
+//                            if (env->GetMz(jj) == existing->GetMz(kk)) {
+//                                uniqueflag = false;
+//                                break;
+//                            }
+//                        }
+//                        if (uniqueflag) {
+//                            containflag = false;
+//                            break;
+//                        }
+//                    }
+//                    if (containflag) {
+//                        addflag = false;
+//                        break;
+//                    }
+//                }
+//            }
+//            
+//            if (addflag) {
+//                envelopes.push_back(env.release());  // Transfer ownership
+//            }
+//        }
+//    }
 //}
-void FindEnvelope(vector<Envelope*>& envelopes, double mz[], double intensity[], int length, int lenMin = 6, int lenMax = 14) {
-    vector<unique_ptr<Envelope>> temp;  // Use unique_ptr for automatic cleanup
-    temp.reserve(length * 1.5f);
-    Envelope* e = nullptr;
-    unsigned short charge;
-    
+//void FindEnvelope(
+//    std::vector<Envelope*>& envelopes,
+//    double mz[],
+//    double intensity[],
+//    int length,
+//    int lenMin = 6,
+//    int lenMax = 14)
+//{
+//    using std::vector;
+//    using std::unique_ptr;
+//
+//    // endAt[i] 存放所有以 mz[i] 结尾的 Envelope
+//    vector<vector<unique_ptr<Envelope>>> endAt(length);
+//
+//    for (int k = 0; k < AcceptChargeLength; ++k) {
+//        unsigned short charge = AcceptCharge[k];
+//        // 清空本轮缓存
+//        for (auto &v : endAt) v.clear();
+//
+//        // 扫描所有峰
+//        for (int i = 0; i < length; ++i) {
+//            if (mz[i] < 0) continue;
+//            double mass = mz[i] * charge;
+//            // 目标前一峰理论位置
+//            double target = (mass - NEUTRON) / charge;
+//            double tol = ENVELOPEPPM * (2.0 * mass - NEUTRON) / 2.0 / charge;
+//
+//            // 二分查找可能的起始峰区域
+//            auto lb = std::lower_bound(mz, mz + i, target - tol);
+//            int jStart = int(lb - mz);
+//            bool extended = false;
+//
+//            // 扩展已有 envelope
+//            for (int j = jStart; j < i && mz[j] <= target + tol; ++j) {
+//                for (auto &envPtr : endAt[j]) {
+//                    if (envPtr->GetLength() < lenMax) {
+//                        envPtr->Add(mz[i], intensity[i], i);
+//                        // 复制当前 envelope 至 i
+//                        endAt[i].push_back(
+//                            std::make_unique<Envelope>(*envPtr)
+//                        );
+//                        extended = true;
+//                    }
+//                }
+//            }
+//
+//            // 若无法扩展，则新建一个 envelope
+//            if (!extended) {
+//                endAt[i].push_back(
+//                    std::make_unique<Envelope>(mz[i], intensity[i], i, charge)
+//                );
+//            }
+//        }
+//
+//        // 收集符合长度且不与已有 envelopes 重叠的新 envelope
+//        for (int i = 0; i < length; ++i) {
+//            for (auto &envPtr : endAt[i]) {
+//                int L = envPtr->GetLength();
+//                if (L < lenMin || L > lenMax) continue;
+//
+//                bool ok = true;
+//                for (auto *ex : envelopes) {
+//                    int M = ex->GetLength();
+//                    bool contains_all = true;
+//                    for (int a = 0; a < L; ++a) {
+//                        bool found = false;
+//                        for (int b = 0; b < M; ++b) {
+//                            if (envPtr->GetMz(a) == ex->GetMz(b)) {
+//                                found = true;
+//                                break;
+//                            }
+//                        }
+//                        if (!found) { contains_all = false; break; }
+//                    }
+//                    if (contains_all) { ok = false; break; }
+//                }
+//                if (ok) {
+//                    envelopes.push_back(envPtr.release());
+//                }
+//            }
+//        }
+//    }
+//}
+void FindEnvelope(
+    std::vector<Envelope*>& envelopes,
+    double mz[],
+    double intensity[],
+    int length,
+    int lenMin = 6,
+    int lenMax = 14)
+{
+    using std::vector;
+    using std::unique_ptr;
+
+    // endAt[i] 存放所有以 mz[i] 结尾的 Envelope
+    vector<vector<unique_ptr<Envelope>>> endAt(length);
+
     for (int k = 0; k < AcceptChargeLength; ++k) {
-        charge = AcceptCharge[k];
-        temp.clear();
-        
-        for (int i = 0; i < length; i++) {
-            if (mz[i] == -1) continue;
-            bool ff = false;
+        unsigned short charge = AcceptCharge[k];
+        // 清空本轮缓存
+        for (auto &v : endAt) v.clear();
+
+        // 扫描所有峰
+        for (int i = 0; i < length; ++i) {
+            if (mz[i] < 0) continue;
             double mass = mz[i] * charge;
-            
-            for (int j = temp.size() - 1; j >= 0; j--) {
-                if (!temp[j]) continue;
-                
-                double lastmass = temp[j]->GetLastMz() * temp[j]->GetCharge();
-                double last2mass = temp[j]->GetMz(temp[j]->GetLength() - 2) * temp[j]->GetCharge();
-                
-                if (abs(lastmass + NEUTRON - mass) < ENVELOPEPPM * (mass + lastmass) / 2.0) {
-                    temp[j]->Add(mz[i], intensity[i], i);
-                    temp.push_back(move(temp[j]));  // Move ownership
-                    ff = true;
-                }
-                else if (abs(last2mass + NEUTRON - mass) < ENVELOPEPPM * (mass + last2mass) / 2.0) {
-                    e = new Envelope(*temp[j], 0, temp[j]->GetLength() - 1);
-                    e->Add(mz[i], intensity[i], i);
-                    temp.push_back(unique_ptr<Envelope>(e));
-                    ff = true;
-                }
-                else if (lastmass < (mass - NEUTRON) * (1.0 - ENVELOPEPPM)) {
-                    break;
+            double target = (mass - NEUTRON) / charge;
+            double tol = ENVELOPEPPM * (2.0 * mass - NEUTRON) / 2.0 / charge;
+
+            // 二分查找可能的起始峰区域
+            auto lb = std::lower_bound(mz, mz + i, target - tol);
+            int jStart = int(lb - mz);
+            bool extended = false;
+
+            // 扩展已有 envelope：复制再添加，避免修改原始
+            for (int j = jStart; j < i && mz[j] <= target + tol; ++j) {
+                for (auto &envPtr : endAt[j]) {
+                    if (envPtr->GetLength() < lenMax) {
+                        // 复制一个新的 envelope 并在新对象上添加
+                        auto newEnv = std::make_unique<Envelope>(*envPtr);
+                        newEnv->Add(mz[i], intensity[i], i);
+                        endAt[i].push_back(std::move(newEnv));
+                        extended = true;
+                    }
                 }
             }
-            
-            if (!ff) {
-                temp.push_back(make_unique<Envelope>(mz[i], intensity[i], i, charge));
+
+            // 若无法扩展，则新建一个 envelope
+            if (!extended) {
+                endAt[i].push_back(
+                    std::make_unique<Envelope>(mz[i], intensity[i], i, charge)
+                );
             }
         }
-        
-        for (auto& env : temp) {
-            if (!env) continue;
-            
-            int len = env->GetLength();
-            bool addflag = (len >= lenMin && len <= lenMax);
-            
-            if (addflag) {
-                for (auto& existing : envelopes) {
-                    bool containflag = true;
-                    for (int jj = 0; jj < len; jj++) {
-                        bool uniqueflag = true;
-                        for (int kk = 0; kk < existing->GetLength(); kk++) {
-                            if (env->GetMz(jj) == existing->GetMz(kk)) {
-                                uniqueflag = false;
+
+        // 收集符合长度且不与已有 envelopes 重叠的新 envelope
+        for (int i = 0; i < length; ++i) {
+            for (auto &envPtr : endAt[i]) {
+                int L = envPtr->GetLength();
+                if (L < lenMin || L > lenMax) continue;
+
+                bool ok = true;
+                for (auto *ex : envelopes) {
+                    int M = ex->GetLength();
+                    bool contains_all = true;
+                    for (int a = 0; a < L; ++a) {
+                        bool found = false;
+                        for (int b = 0; b < M; ++b) {
+                            if (envPtr->GetMz(a) == ex->GetMz(b)) {
+                                found = true;
                                 break;
                             }
                         }
-                        if (uniqueflag) {
-                            containflag = false;
-                            break;
-                        }
+                        if (!found) { contains_all = false; break; }
                     }
-                    if (containflag) {
-                        addflag = false;
-                        break;
-                    }
+                    if (contains_all) { ok = false; break; }
                 }
-            }
-            
-            if (addflag) {
-                envelopes.push_back(env.release());  // Transfer ownership
+                if (ok) {
+                    envelopes.push_back(envPtr.release());
+                }
             }
         }
     }

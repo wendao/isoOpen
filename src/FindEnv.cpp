@@ -26,14 +26,14 @@ void FindEnvelope(std::vector<Envelope*>& envelopes,
     if (n == 0 || intensity.size() != n) return;
 
     // 13C–12C 质量差常数（Da）
-    const double C13C12 = 1.0033548378;
+    const double C13C12 = 1.003354835;
     // 匹配容差，可根据仪器分辨率调节
     const double tol = 0.01;
 
     // 标记峰是否已归入某个 envelope
     std::vector<bool> used(n, false);
     // 电荷优先级：高电荷先扫描
-    const std::vector<int> charges = {6, 5, 4, 3, 2, 1};
+    const std::vector<int> charges = {7, 6, 5, 4, 3, 2, 1};
 
     for (int charge : charges) {
         double deltaM = C13C12 / charge;
