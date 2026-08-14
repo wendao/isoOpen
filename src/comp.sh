@@ -1,6 +1,21 @@
-#g++ -O2 -o SESTAR SESTAR.cpp
-#awk '$1 ~ /^[HSI]/ || $2 > 1000' 2079.ms1 > fast_filter.ms1
-#./SESTAR fast_filter.ms1
+#!/usr/bin/env bash
+set -euo pipefail
 
-g++ -std=c++17 -O2 -Wall -c Envelope.cpp -o Envelope.o 
-g++ -std=c++17 -O2 -Wall FindEnv.cpp Envelope.o -o find_envelope
+CXX="${CXX:-g++}"
+compile_omp=(-fopenmp)
+link_omp=(-fopenmp)
+
+# Apple Clang ships without OpenMP enabled, while Homebrew libomp provides the
+# headers and runtime. Linux GCC continues to use the ordinary -fopenmp path.
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    libomp="${LIBOMP_PREFIX:-$(brew --prefix libomp)}"
+    compile_omp=(-Xpreprocessor -fopenmp -I"$libomp/include")
+    link_omp=(-Xpreprocessor -fopenmp -I"$libomp/include" \
+              -L"$libomp/lib" -Wl,-rpath,"$libomp/lib" -lomp)
+fi
+
+"$CXX" -std=c++17 -O2 -Wall "${compile_omp[@]}" -c Envelope.cpp -o Envelope.o
+"$CXX" -std=c++17 -O2 -Wall "${compile_omp[@]}" FindEnv.cpp Envelope.o \
+    "${link_omp[@]}" -o find_envelope
+"$CXX" -std=c++17 -O2 -Wall "${compile_omp[@]}" FindPair.cpp Envelope.o \
+    "${link_omp[@]}" -o find_pair

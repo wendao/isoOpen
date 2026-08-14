@@ -1,3 +1,4 @@
-*.pyc
-*.tsv
-.aider*
+# Local build artifacts produced by src/comp.sh
+src/*.o
+src/find_envelope
+src/find_pair

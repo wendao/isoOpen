@@ -21,6 +21,11 @@ void Envelope::AddPeak(double mz, double intensity) {
     intensities_.push_back(intensity);
 }
 
+void Envelope::Reserve(std::size_t capacity) {
+    mzs_.reserve(capacity);
+    intensities_.reserve(capacity);
+}
+
 /**
  * @brief Get the charge state of this envelope.
  * @return int The charge state.
